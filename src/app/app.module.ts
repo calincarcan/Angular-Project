@@ -18,7 +18,6 @@ import { AngularFireModule } from '@angular/fire/compat';
 import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
 
 import { FirebaseService } from './services/firebase';
-import { SuperheroFactoryService } from "./services/superhero-factory";
 
 
 @NgModule({
@@ -34,8 +33,7 @@ import { SuperheroFactoryService } from "./services/superhero-factory";
         AngularFireModule.initializeApp(environment.firebase, 'AngularDemoFirebase'),
         AngularFireDatabaseModule],
     providers: [
-        FirebaseService,
-        SuperheroFactoryService
+        FirebaseService
     ],
     bootstrap: [AppComponent]
 })

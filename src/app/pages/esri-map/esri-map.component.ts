@@ -16,8 +16,6 @@ import Polygon from '@arcgis/core/geometry/Polygon';
 import Config from '@arcgis/core/config';
 import WebMap from '@arcgis/core/WebMap';
 import MapView from '@arcgis/core/views/MapView';
-import Bookmarks from '@arcgis/core/widgets/Bookmarks';
-import Expand from '@arcgis/core/widgets/Expand';
 
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from '@arcgis/core/Graphic';
@@ -33,7 +31,6 @@ import Search from "@arcgis/core/widgets/Search";
 
 import { Subscription } from "rxjs";
 import { FirebaseService, IDatabaseItem } from "src/app/services/firebase";
-import { SuperheroFactoryService } from "src/app/services/superhero-factory";
 
 @Component({
     selector: "app-esri-map",
@@ -53,9 +50,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     trailheadsLayer: esri.FeatureLayer;
     graphicsLayerUserPoints: esri.GraphicsLayer;
     graphicsLayerStaticPoints: esri.GraphicsLayer;
+    grapchisLayerCoffePoints: esri.GraphicsLayer;
+
 
     zoom = 10;
-    center: Array<number> = [-118.73682450024377, 34.07817583063242];
+    // center: Array<number> = [-118.73682450024377, 34.07817583063242]; // Los Angeles
+    center: Array<number> = [26.1025, 44.4268]; // Bucharest
     basemap = "streets-vector";
     loaded = false;
     directionsElement: any;
@@ -63,12 +63,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     isConnected: boolean = false;
     subscriptionList: Subscription;
     subscriptionObj: Subscription;
+    coffeeList: Subscription;
 
     listItems: IDatabaseItem[] = [];
 
     constructor(
-        private fbs: FirebaseService,
-        private sfs: SuperheroFactoryService
+        private fbs: FirebaseService
     ) {}
 
     ngOnInit() {
@@ -76,7 +76,6 @@ export class EsriMapComponent implements OnInit, OnDestroy {
             this.initializeMap().then(() => {
                 this.loaded = this.view.ready;
                 this.mapLoadedEvent.emit(true);
-                this.addSampleGraphics(); // Adaugă graficele de exemplu
 
                 // Conectează la Firebase și afișează datele pe hartă
                 this.connectFirebase();
@@ -91,6 +90,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         }
     }
 
+    // *********************************************
+    // * Firebase integration
 
     connectFirebase() {
         if (this.isConnected) {
@@ -102,19 +103,15 @@ export class EsriMapComponent implements OnInit, OnDestroy {
             console.log("list updated: ", items);
             this.listItems = items;
         });
+
+        this.coffeeList = this.fbs.getCoffeeList().subscribe((items: IDatabaseItem[]) => {
+            console.log("coffeelist updated: ", items);
+            this.listItems = items;
+        });
+
         this.subscriptionObj = this.fbs.getChangeFeedObject().subscribe((stat: IDatabaseItem) => {
             console.log("object updated: ", stat);
         });
-    }
-
-    addListItem() {
-        let newItemValue: string = Math.floor(Math.random() * 100).toString();
-        newItemValue = this.sfs.getName();
-        this.fbs.addSimpleListObject(newItemValue);
-    }
-
-    removeItems() {
-        this.fbs.removeListItems();
     }
 
     disconnectFirebase() {
@@ -124,13 +121,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         if (this.subscriptionObj != null) {
             this.subscriptionObj.unsubscribe();
         }
+        if (this.coffeeList != null) {
+            this.coffeeList.unsubscribe();
+        }
     }
 
-    // *********************************************
-    // LAB 5
-
     addPointToFirebase(lat: number, lng: number) {
-        // Salvăm coordonatele punctului în Firebase
         this.fbs.addListObject({ latitude: lat, longitude: lng });
     }
 
@@ -138,13 +134,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         setInterval(() => {
             const center = this.view.center;
             this.fbs.updateUserPosition({ latitude: center.latitude, longitude: center.longitude });
-        }, 1000); // Actualizare o dată pe secundă
+        }, 1_000); //! Actualizeaza pozitia utilizatorului la fiecare 1 de secunde
     }
 
     displayFirebaseDataOnMap() {
         // Afișează toate punctele din `mapPoints`
         this.subscriptionList = this.fbs.getMapPoints().subscribe((items: any[]) => {
-            // Elimină doar punctele statice pentru a evita dublările
             this.graphicsLayerStaticPoints.removeAll();
 
             // Adaugă fiecare punct static din Firebase pe hartă
@@ -169,6 +164,34 @@ export class EsriMapComponent implements OnInit, OnDestroy {
                 }
             });
             console.log("Punctele statice din Firebase afișate pe hartă:", items);
+        });
+        
+        // Afiseaza cafenelele din lista coffeeList
+        this.coffeeList = this.fbs.getCoffeeList().subscribe((items: any[]) => {
+            this.grapchisLayerCoffePoints.removeAll();
+
+            // Adaugă fiecare punct static din Firebase pe hartă
+            items.forEach(item => {
+                if (item.latitude != null && item.longitude != null) {
+                    const point = new Point({
+                        longitude: item.longitude,
+                        latitude: item.latitude
+                    });
+
+                    const pointSymbol = {
+                        type: "simple-marker",
+                        color: [255, 0, 0],   // Rosu pentru cafenele
+                        outline: { color: [255, 255, 255], width: 1 } // Contur alb
+                    };
+
+                    const pointGraphic = new Graphic({
+                        geometry: point,
+                        symbol: pointSymbol
+                    });
+                    this.grapchisLayerCoffePoints.add(pointGraphic);
+                }
+            });
+            console.log("Cafenelele din lista afișate pe hartă:", items);
         });
 
         // Afișează coordonatele utilizatorului în timp real
@@ -203,7 +226,6 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     async initializeMap() {
         try {
             Config.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurGZnrO0aYjmZ_npt39dGgIyZUAxtLIFy4jO4rcFTpRiXKEPtdLox0sphDby4Pf6e2cRTjkx4O1rJxzaNe2YUaFVX2pdMvvHDgd4tIg0woOjnsR6dSr-4xVUMpUT5VNKBkHNGxwIbrBHoj_sbQRQcttaQd5yruV7KX0UiWKR20TjstcDwmL8_fcY2n81h6AgLfTiNIlCEaWHJy7B7cYmfHV0.AT1_z3CHMbib";
-
             const mapProperties: esri.WebMapProperties = {
                 basemap: this.basemap
             };
@@ -232,8 +254,10 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
             await this.view.when();
             console.log("ArcGIS map loaded");
+
             this.addRouting();
             this.addSearchWidget();
+
             return this.view;
         } catch (error) {
             console.error("Error loading the map: ", error);
@@ -241,24 +265,29 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         }
     }
 
+
+    //! Exemplu de grafica, nu este apelata in aplicatie
     addSampleGraphics() {
         // Exemplu de punct grafic în Los Angeles
         const point = new Point({
             longitude: -118.80657463861,
             latitude: 34.0005930608889
         });
+
         const pointSymbol = {
             type: "simple-marker",
             color: [226, 119, 40],
             outline: { color: [255, 255, 255], width: 1 } // White outline
         };
+
         const pointGraphic = new Graphic({
             geometry: point,
             symbol: pointSymbol
         });
+
         this.graphicsLayer.add(pointGraphic);
 
-        // Exemplu de linie grafică între două puncte din zona Los Angeles
+        // Exemplu de linie grafică între trei puncte din zona Los Angeles
         const polyline = new Polyline({
             paths: [
                 [[-118.821527826096, 34.0139576938577],
@@ -280,10 +309,10 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         // Exemplu de poligon grafic mai mare în zona Los Angeles
         const polygon = new Polygon({
             rings: [
-                [[-118.818984489994, 34.0137559967283], //Longitude, latitude
-                [-118.806796597377, 34.0215816298725], //Longitude, latitude
-                [-118.791432890735, 34.0163883241613], //Longitude, latitude
-                [-118.79596686535, 34.008564864635],   //Longitude, latitude
+                [[-118.818984489994, 34.0137559967283],
+                [-118.806796597377, 34.0215816298725],
+                [-118.791432890735, 34.0163883241613],
+                [-118.79596686535, 34.008564864635],
                 [-118.808558110679, 34.0035027131376]
                 ]
             ]
@@ -314,21 +343,23 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
 
     addFeatureLayers() {
-        this.trailheadsLayer = new FeatureLayer({
-            url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0",
-            outFields: ['*']
-        });
-        this.map.add(this.trailheadsLayer);
+        //! Exemplu de strat tematic cu trasee de drumeție in Los Angeles
 
-        const trailsLayer = new FeatureLayer({
-            url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
-        });
-        this.map.add(trailsLayer, 0);
+        // this.trailheadsLayer = new FeatureLayer({
+        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0",
+        //     outFields: ['*']
+        // });
+        // this.map.add(this.trailheadsLayer);
 
-        const parksLayer = new FeatureLayer({
-            url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
-        });
-        this.map.add(parksLayer, 0);
+        // const trailsLayer = new FeatureLayer({
+        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
+        // });
+        // this.map.add(trailsLayer, 0);
+
+        // const parksLayer = new FeatureLayer({
+        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
+        // });
+        // this.map.add(parksLayer, 0);
 
         console.log("Feature layers added");
     }
@@ -342,11 +373,17 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         this.map.add(this.graphicsLayerStaticPoints);
         this.graphicsLayerUserPoints = new GraphicsLayer();
         this.map.add(this.graphicsLayerUserPoints);
+        this.grapchisLayerCoffePoints = new GraphicsLayer();
+        this.map.add(this.grapchisLayerCoffePoints);
+        
+        console.log("Graphics layers added");
     }
 
     addRouting() {
+        console.log("Routing added");
         const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
         this.view.on("click", (event) => {
+            console.log("got click event: ", event);
             this.view.hitTest(event).then((elem: esri.HitTestResult) => {
                 if (elem && elem.results && elem.results.length > 0) {
                     let point: esri.Point = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
@@ -398,6 +435,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
 
     async calculateRoute(routeUrl: string) {
+        console.log("Calculating route");
         const routeParams = new RouteParameters({
             stops: new FeatureSet({
                 features: this.graphicsLayerUserPoints.graphics.toArray()
@@ -415,6 +453,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
 
     displayRoute(data: any) {
+        console.log("Displaying route");
         for (const result of data.routeResults) {
             result.route.symbol = {
                 type: "simple-line",
@@ -430,7 +469,9 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         }
     }
 
+    // Functia se apeleaza la apasarea butonului x
     clearRouter() {
+        console.log("Clearing route");
         if (this.view) {
             // Remove all graphics related to routes
             this.fbs.removeMapPoints();
@@ -438,7 +479,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
             this.removePoints();
             console.log("Route cleared");
             this.view.ui.remove(this.directionsElement);
-            this.view.ui.empty("top-right");
+
             console.log("Directions cleared");
         }
     }
@@ -455,8 +496,8 @@ export class EsriMapComponent implements OnInit, OnDestroy {
             this.directionsElement.appendChild(direction);
         });
 
-        this.view.ui.empty("top-right");
-        this.view.ui.add(this.directionsElement, "top-right");
+        this.view.ui.empty("bottom-left");
+        this.view.ui.add(this.directionsElement, "bottom-left");
     }
 
     ngOnDestroy() {

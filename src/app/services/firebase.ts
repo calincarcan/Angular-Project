@@ -20,6 +20,10 @@ export class FirebaseService {
         this.objFeed = this.db.object('obj').valueChanges();
     }
 
+    getCoffeeList() {
+        return this.db.list('listaCafenele').valueChanges();
+    }
+
     getChangeFeedList() {
         return this.listFeed;
     }
@@ -32,39 +36,19 @@ export class FirebaseService {
         this.db.list('list').remove();
     }
 
-    addSimpleListObject(val: string) {
-        let item: IDatabaseItem = {
-            name: "test",
-            val: val
-        };
-        this.db.list('list').push(item);
-    }
-
-    updateObject(val: string) {
-        let item: IDatabaseItem = {
-            name: "test",
-            val: val
-        };
-        this.db.object('obj').set([item]);
-    }
-
     updateUserPosition(position: { latitude: number; longitude: number }) {
-        // Actualizăm poziția centrală a utilizatorului în Firebase
         this.db.object('userPosition').set(position);
     }
 
     getUserPosition() {
-        // Obținem poziția centrală a utilizatorului din Firebase
         return this.db.object('userPosition').valueChanges();
     }
 
     addListObject(data: { latitude: number; longitude: number }) {
-        // Adăugăm un punct de locație în lista de puncte din Firebase
         this.db.list('mapPoints').push(data);
     }
 
     getMapPoints() {
-        // Obținem lista de puncte din Firebase
         return this.db.list('mapPoints').valueChanges();
     }
 
