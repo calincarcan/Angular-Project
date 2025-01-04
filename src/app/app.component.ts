@@ -26,7 +26,8 @@ export class AppComponent {
 
   activeTab = this.tabs[0].link;
 
-  constructor(private router: Router) {
+  constructor(private router: Router)
+    {
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationEnd) {
         this.activeTab = event.url;

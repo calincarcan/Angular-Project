@@ -48,6 +48,7 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     graphicsLayer: esri.GraphicsLayer;
     graphicsLayerRoutes: esri.GraphicsLayer;
     trailheadsLayer: esri.FeatureLayer;
+    subwaymapLayer: esri.FeatureLayer;
     graphicsLayerUserPoints: esri.GraphicsLayer;
     graphicsLayerStaticPoints: esri.GraphicsLayer;
     grapchisLayerCoffePoints: esri.GraphicsLayer;
@@ -344,23 +345,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
 
     addFeatureLayers() {
         //! Exemplu de strat tematic cu trasee de drumeție in Los Angeles
-
-        // this.trailheadsLayer = new FeatureLayer({
-        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0",
-        //     outFields: ['*']
-        // });
-        // this.map.add(this.trailheadsLayer);
-
-        // const trailsLayer = new FeatureLayer({
-        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
-        // });
-        // this.map.add(trailsLayer, 0);
-
-        // const parksLayer = new FeatureLayer({
-        //     url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
-        // });
-        // this.map.add(parksLayer, 0);
-
+        
+        this.subwaymapLayer = new FeatureLayer({
+            url: "https://services7.arcgis.com/WZsQXfbqjCVuays2/ArcGIS/rest/services/Bucharest__RO__WFL1/FeatureServer/46",
+            outFields: ['*']
+        });
+        this.map.add(this.subwaymapLayer);
         console.log("Feature layers added");
     }
 
@@ -385,18 +375,16 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         this.view.on("click", (event) => {
             console.log("got click event: ", event);
             this.view.hitTest(event).then((elem: esri.HitTestResult) => {
+                console.log("got hit test result: ", elem);
                 if (elem && elem.results && elem.results.length > 0) {
-                    let point: esri.Point = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
-                    if (point) {
-                        console.log("get selected point: ", elem, point);
-                        if (this.graphicsLayerUserPoints.graphics.length === 0) {
-                            this.addPoint(point.latitude, point.longitude);
-                        } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
-                            this.addPoint(point.latitude, point.longitude);
-                            this.calculateRoute(routeUrl);
-                        } else {
-                            this.removePoints();
-                        }
+                    if (this.graphicsLayerUserPoints.graphics.length === 0) {
+                        this.addPoint(elem.results[0].mapPoint.latitude, elem.results[0].mapPoint.longitude);
+                    } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
+                        this.addPoint(elem.results[0].mapPoint.latitude, elem.results[0].mapPoint.longitude);
+                        this.calculateRoute(routeUrl);
+                    } else {
+                        this.clearRouter();
+                        this.addPoint(elem.results[0].mapPoint.latitude, elem.results[0].mapPoint.longitude);
                     }
                 }
             });
