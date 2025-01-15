@@ -196,30 +196,30 @@ export class EsriMapComponent implements OnInit, OnDestroy {
         });
 
         // Afișează coordonatele utilizatorului în timp real
-        this.subscriptionObj = this.fbs.getUserPosition().subscribe((position: any) => {
-            if (position && position.latitude != null && position.longitude != null) {
-                const userPoint = new Point({
-                    longitude: position.longitude,
-                    latitude: position.latitude
-                });
+        // this.subscriptionObj = this.fbs.getUserPosition().subscribe((position: any) => {
+        //     if (position && position.latitude != null && position.longitude != null) {
+        //         const userPoint = new Point({
+        //             longitude: position.longitude,
+        //             latitude: position.latitude
+        //         });
 
-                const userSymbol = {
-                    type: "simple-marker",
-                    color: [0, 120, 255], // Albastru pentru poziția utilizatorului
-                    outline: { color: [255, 255, 255], width: 1 } // Contur alb
-                };
+        //         const userSymbol = {
+        //             type: "simple-marker",
+        //             color: [0, 120, 255], // Albastru pentru poziția utilizatorului
+        //             outline: { color: [255, 255, 255], width: 1 } // Contur alb
+        //         };
 
-                const userGraphic = new Graphic({
-                    geometry: userPoint,
-                    symbol: userSymbol
-                });
+        //         const userGraphic = new Graphic({
+        //             geometry: userPoint,
+        //             symbol: userSymbol
+        //         });
 
-                // Elimină și actualizează doar punctul utilizatorului
-                this.graphicsLayerUserPoints.removeAll();
-                this.graphicsLayerUserPoints.add(userGraphic);
-                console.log("Coordonatele utilizatorului afișate pe hartă:", position);
-            }
-        });
+        //         // Elimină și actualizează doar punctul utilizatorului
+        //         this.graphicsLayerUserPoints.removeAll();
+        //         this.graphicsLayerUserPoints.add(userGraphic);
+        //         console.log("Coordonatele utilizatorului afișate pe hartă:", position);
+        //     }
+        // });
     }
 
     // *********************************************
@@ -344,13 +344,12 @@ export class EsriMapComponent implements OnInit, OnDestroy {
     }
 
     addFeatureLayers() {
-        //! Exemplu de strat tematic cu trasee de drumeție in Los Angeles
-        
         this.subwaymapLayer = new FeatureLayer({
             url: "https://services7.arcgis.com/WZsQXfbqjCVuays2/ArcGIS/rest/services/Bucharest__RO__WFL1/FeatureServer/46",
             outFields: ['*']
         });
         this.map.add(this.subwaymapLayer);
+        
         console.log("Feature layers added");
     }
 
